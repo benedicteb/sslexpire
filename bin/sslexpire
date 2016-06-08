@@ -5,10 +5,21 @@
 import subprocess
 import argparse
 import re
+import os.path as op
+import sys
 
 from datetime import datetime as dt
 
-_OPENSSL = '/bin/openssl'
+_OPENSSL_FEDORA = '/bin/openssl'
+_OPENSSL_RHEL = '/usr/bin/openssl'
+
+if op.isfile(_OPENSSL_FEDORA):
+    _OPENSSL = _OPENSSL_FEDORA
+elif op.isfile(_OPENSSL_RHEL):
+    _OPENSSL = _OPENSSL_RHEL
+else:
+    print "Can't find openssl."
+    sys.exit(1)
 
 def get_ssl_expiry_date(host, port=443, verbose=False):
     """
