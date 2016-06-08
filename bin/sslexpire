@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+"""
+@author benedebr
+"""
+import subprocess
+import argparse
+import re
+
+from datetime import datetime as dt
+
+_OPENSSL = '/bin/openssl'
+
+def get_ssl_expiry_date(host, port=443, verbose=False):
+    """
+    Returns the expiry date of the ssl cert of any server as a datetime object.
+    """
+    command = [_OPENSSL, 's_client', '-connect', '%s:%s' % (host, port)]
+    process = subprocess.Popen(command, stdout=subprocess.PIPE,
+            stdin=subprocess.PIPE)
+
+    if verbose:
+        print ' '.join(command)
+
+    stdout,stderr = process.communicate('GET /')
+
+    command = [_OPENSSL, 'x509', '-noout', '-dates']
+
+    if verbose:
+        print ' '.join(command)
+
+    process = subprocess.Popen(command, stdout=subprocess.PIPE,
+            stdin=subprocess.PIPE)
+
+    stdout,stderr = process.communicate(stdout)
+
+    date_str = re.search(r'^.*notAfter=(.+)$', stdout, re.MULTILINE).group(1)
+
+    return dt.strptime(date_str, '%b %d %H:%M:%S %Y GMT')
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('host', type=str,
+            help='The server to check.')
+    parser.add_argument('-p', '--port', type=int,
+            help='The port to poll.', default=443)
+    parser.add_argument('-v', '--verbose', action='store_true')
+    parser.add_argument('--days-until', action='store_true',
+            help='Script will print an int representing number of days until\
+                  certificate expires.')
+
+    args = parser.parse_args()
+
+    expiry_date = get_ssl_expiry_date(args.host, port=args.port,
+            verbose=args.verbose)
+
+    if args.days_until:
+        print (expiry_date - dt.now()).days
+    else:
+        print expiry_date
